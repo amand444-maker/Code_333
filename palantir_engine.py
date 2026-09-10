@@ -150,6 +150,7 @@ class StrategicSignalFusionEngine:
 
         paths: Dict[str, List[str]] = {}
         best_candidates: Dict[str, Tuple[int, float, str, str]] = {}
+        finalized_candidates: Dict[str, Tuple[int, float, str, str]] = {}
         frontier: List[Tuple[int, float, str, str, str]] = []
 
         for watched in sorted(watchlist):
@@ -161,19 +162,24 @@ class StrategicSignalFusionEngine:
             hop_count, neg_strength, terminal_watch, next_hop, current = heappop(frontier)
             if best_candidates.get(current) != (hop_count, neg_strength, terminal_watch, next_hop):
                 continue
+            if current in finalized_candidates:
+                continue
+            finalized_candidates[current] = (hop_count, neg_strength, terminal_watch, next_hop)
 
             for predecessor, weight in reverse_graph.get(current, ()):
                 candidate = (hop_count + 1, neg_strength - weight, terminal_watch, current)
-                if candidate < best_candidates.get(predecessor, (float("inf"), float("inf"), "\uffff", "\uffff")):
+                if predecessor not in finalized_candidates and candidate < best_candidates.get(
+                    predecessor, (float("inf"), float("inf"), "\uffff", "\uffff")
+                ):
                     best_candidates[predecessor] = candidate
                     heappush(frontier, (*candidate, predecessor))
 
-        for entity in best_candidates:
+        for entity in finalized_candidates:
             if entity not in watchlist:
                 current = entity
                 path = [current]
                 while current not in watchlist:
-                    current = best_candidates[current][3]
+                    current = finalized_candidates[current][3]
                     path.append(current)
                 paths[entity] = path
         return paths
