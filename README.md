@@ -10,11 +10,11 @@
 ## Run the demo
 
 ```bash
-python3 /home/runner/work/Code_333/Code_333/palantir_engine.py
+python3 palantir_engine.py
 ```
 
 ## Run the tests
 
 ```bash
-python3 -m unittest discover -s /home/runner/work/Code_333/Code_333 -p 'test_*.py'
+python3 -m unittest discover -s . -p 'test_*.py'
 ```

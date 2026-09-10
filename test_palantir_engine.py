@@ -29,6 +29,8 @@ class StrategicSignalFusionEngineTests(unittest.TestCase):
         result = StrategicSignalFusionEngine(signals).analyze(watchlist=set())
         by_entity = {assessment.entity: assessment for assessment in result.assessments}
         self.assertGreater(by_entity["target"].suspicion_score, by_entity["other"].suspicion_score)
+        self.assertGreater(by_entity["target"].total_score, by_entity["other"].total_score)
+        self.assertEqual(result.assessments[0].entity, "target")
 
 
 if __name__ == "__main__":
