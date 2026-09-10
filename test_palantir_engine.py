@@ -7,8 +7,20 @@ from palantir_engine import Signal, StrategicSignalFusionEngine, build_demo_resu
 class StrategicSignalFusionEngineTests(unittest.TestCase):
     def test_demo_prioritizes_watchtower_network(self) -> None:
         result = build_demo_result()
-        self.assertEqual(result.assessments[0].entity, "watchtower")
+        self.assertEqual(
+            [assessment.entity for assessment in result.assessments[:5]],
+            ["watchtower", "helios_node", "black_orchid", "atlas_holdings", "meridian_logistics"],
+        )
         self.assertGreater(result.graph_weights["black_orchid"]["watchtower"], 1.0)
+        self.assertEqual(
+            result.exposure_paths,
+            {
+                "atlas_holdings": ["atlas_holdings", "watchtower"],
+                "black_orchid": ["black_orchid", "watchtower"],
+                "helios_node": ["helios_node", "watchtower"],
+                "meridian_logistics": ["meridian_logistics", "watchtower"],
+            },
+        )
 
     def test_exposure_paths_lead_back_to_watchlist(self) -> None:
         signals = [

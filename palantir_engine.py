@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from collections import defaultdict, deque
-from dataclasses import dataclass, field
+from collections import defaultdict
+from dataclasses import dataclass
 from datetime import datetime
+from heapq import heappop, heappush
 from math import exp, log
-from typing import DefaultDict, Dict, Iterable, List, Mapping, MutableMapping, Sequence, Set, Tuple
+from typing import DefaultDict, Dict, Iterable, List, Mapping, Sequence, Set, Tuple
 
 
 @dataclass(frozen=True)
@@ -46,8 +47,13 @@ class StrategicSignalFusionEngine:
         anomalies = self._calculate_anomalies()
         tags = self._supporting_tags()
         paths = self._exposure_paths(graph, watchlist_set)
+        graph_entities = set(graph) | {
+            target
+            for targets in graph.values()
+            for target in targets
+        }
 
-        entities = set(graph) | set(suspicion) | set(anomalies) | set(tags) | watchlist_set
+        entities = graph_entities | set(suspicion) | set(anomalies) | set(tags) | watchlist_set
         assessments = []
         for entity in sorted(entities):
             total = (
@@ -137,26 +143,35 @@ class StrategicSignalFusionEngine:
     def _exposure_paths(
         self, graph: Mapping[str, Mapping[str, float]], watchlist: Set[str]
     ) -> Dict[str, List[str]]:
-        reverse_graph: DefaultDict[str, List[str]] = defaultdict(list)
+        reverse_graph: DefaultDict[str, List[Tuple[str, float]]] = defaultdict(list)
         for source, targets in graph.items():
-            for target in targets:
-                reverse_graph[target].append(source)
+            for target, weight in targets.items():
+                reverse_graph[target].append((source, weight))
 
         paths: Dict[str, List[str]] = {}
+        best_candidates: Dict[str, Tuple[int, float, Tuple[str, ...]]] = {}
+        frontier: List[Tuple[int, float, Tuple[str, ...], str]] = []
+
         for watched in sorted(watchlist):
-            queue = deque([(watched, [watched])])
-            seen = {watched}
-            while queue:
-                current, path = queue.popleft()
-                predecessors = sorted(reverse_graph.get(current, ()), key=lambda node: (-sum(graph[node].values()), node))
-                for predecessor in predecessors:
-                    if predecessor in seen:
-                        continue
-                    seen.add(predecessor)
-                    next_path = [predecessor, *path]
-                    queue.append((predecessor, next_path))
-                    if predecessor not in watchlist:
-                        paths.setdefault(predecessor, next_path)
+            candidate = (0, 0.0, (watched,))
+            best_candidates[watched] = candidate
+            heappush(frontier, (0, 0.0, (watched,), watched))
+
+        while frontier:
+            hop_count, neg_strength, path, current = heappop(frontier)
+            if best_candidates.get(current) != (hop_count, neg_strength, path):
+                continue
+
+            for predecessor, weight in reverse_graph.get(current, ()):
+                next_path = (predecessor, *path)
+                candidate = (hop_count + 1, neg_strength - weight, next_path)
+                if candidate < best_candidates.get(predecessor, (float("inf"), float("inf"), ())):
+                    best_candidates[predecessor] = candidate
+                    heappush(frontier, (*candidate, predecessor))
+
+        for entity, (_, _, path) in best_candidates.items():
+            if entity not in watchlist:
+                paths[entity] = list(path)
         return paths
 
     @staticmethod
