@@ -153,37 +153,41 @@ class StrategicSignalFusionEngine:
                 reverse_graph[target].append((source, weight))
 
         paths: Dict[str, List[str]] = {}
-        best_candidates: Dict[str, Tuple[int, float, str, str]] = {}
-        finalized_candidates: Dict[str, Tuple[int, float, str, str]] = {}
-        frontier: List[Tuple[int, float, str, str, str]] = []
+        best_scores: Dict[str, Tuple[int, float]] = {}
+        best_payloads: Dict[str, Tuple[str, str]] = {}
+        finalized_scores: Dict[str, Tuple[int, float]] = {}
+        finalized_payloads: Dict[str, Tuple[str, str]] = {}
+        frontier: List[Tuple[int, float, str]] = []
 
         for watched in sorted(watchlist):
-            candidate = (0, 0.0, watched, "")
-            best_candidates[watched] = candidate
-            heappush(frontier, (0, 0.0, watched, "", watched))
+            best_scores[watched] = (0, 0.0)
+            best_payloads[watched] = ("", watched)
+            heappush(frontier, (0, 0.0, watched))
 
         while frontier:
-            hop_count, neg_strength, terminal_watch, next_hop, current = heappop(frontier)
-            if best_candidates.get(current) != (hop_count, neg_strength, terminal_watch, next_hop):
+            hop_count, neg_strength, current = heappop(frontier)
+            if best_scores.get(current) != (hop_count, neg_strength):
                 continue
-            if current in finalized_candidates:
+            if current in finalized_scores:
                 continue
-            finalized_candidates[current] = (hop_count, neg_strength, terminal_watch, next_hop)
+            finalized_scores[current] = (hop_count, neg_strength)
+            finalized_payloads[current] = best_payloads[current]
 
             for predecessor, weight in reverse_graph.get(current, ()):
-                candidate = (hop_count + 1, neg_strength - weight, terminal_watch, current)
-                if predecessor not in finalized_candidates and candidate < best_candidates.get(
-                    predecessor, (float("inf"), float("inf"), "\uffff", "\uffff")
+                candidate_score = (hop_count + 1, neg_strength - weight)
+                if predecessor not in finalized_scores and candidate_score < best_scores.get(
+                    predecessor, (float("inf"), float("inf"))
                 ):
-                    best_candidates[predecessor] = candidate
-                    heappush(frontier, (*candidate, predecessor))
+                    best_scores[predecessor] = candidate_score
+                    best_payloads[predecessor] = (current, finalized_payloads[current][1])
+                    heappush(frontier, (*candidate_score, predecessor))
 
-        for entity in finalized_candidates:
+        for entity in finalized_scores:
             if entity not in watchlist:
                 current = entity
                 path = [current]
                 while current not in watchlist:
-                    current = finalized_candidates[current][3]
+                    current = finalized_payloads[current][0]
                     path.append(current)
                 paths[entity] = path
         return paths
