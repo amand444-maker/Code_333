@@ -174,7 +174,9 @@ class StrategicSignalFusionEngine:
             finalized_payloads[current] = best_payloads[current]
 
             for predecessor, weight in reverse_graph.get(current, ()):
-                candidate_score = (hop_count + 1, neg_strength - weight)
+                current_bottleneck = float("inf") if hop_count == 0 else -neg_strength
+                candidate_bottleneck = min(current_bottleneck, weight)
+                candidate_score = (hop_count + 1, -candidate_bottleneck)
                 if predecessor not in finalized_scores and candidate_score < best_scores.get(
                     predecessor, (float("inf"), float("inf"))
                 ):
@@ -195,40 +197,40 @@ class StrategicSignalFusionEngine:
     @staticmethod
     def _signal_multiplier(signal_type: str) -> float:
         return {
-            "financial_transfer": 1.35,
-            "co_travel": 1.2,
-            "encrypted_contact": 1.4,
-            "facility_access": 1.1,
-            "procurement": 1.15,
+            "supplier_payment": 1.35,
+            "shipment_overlap": 1.2,
+            "inventory_sync": 1.4,
+            "dock_access": 1.1,
+            "route_change": 1.15,
         }.get(signal_type, 1.0)
 
     @staticmethod
     def _tag_weight(tag: str) -> float:
         return {
-            "shell_company": 0.5,
-            "dual_use": 0.35,
-            "sanctioned_route": 0.45,
-            "spoofed_identity": 0.55,
-            "unusual_hour": 0.2,
+            "single_source": 0.5,
+            "regulated_material": 0.35,
+            "route_deviation": 0.45,
+            "identity_mismatch": 0.55,
+            "after_hours": 0.2,
         }.get(tag, 0.1)
 
 
 def build_demo_result() -> AnalysisResult:
     signals = [
-        Signal("atlas_holdings", "black_orchid", datetime(2026, 8, 1, 10, 0), 0.92, "financial_transfer", ("shell_company",)),
-        Signal("black_orchid", "helios_node", datetime(2026, 8, 2, 8, 15), 0.88, "encrypted_contact", ("spoofed_identity",)),
-        Signal("meridian_logistics", "helios_node", datetime(2026, 8, 3, 22, 5), 0.83, "procurement", ("dual_use", "unusual_hour")),
-        Signal("helios_node", "watchtower", datetime(2026, 8, 4, 9, 30), 0.9, "facility_access"),
-        Signal("atlas_holdings", "watchtower", datetime(2026, 8, 4, 9, 45), 0.74, "co_travel"),
-        Signal("meridian_logistics", "watchtower", datetime(2026, 8, 4, 9, 46), 0.79, "co_travel", ("sanctioned_route",)),
-        Signal("black_orchid", "watchtower", datetime(2026, 8, 4, 9, 47), 0.93, "facility_access"),
+        Signal("northstar_supply", "harbor_buffer", datetime(2026, 8, 1, 10, 0), 0.92, "supplier_payment", ("single_source",)),
+        Signal("harbor_buffer", "relay_cluster", datetime(2026, 8, 2, 8, 15), 0.88, "inventory_sync", ("identity_mismatch",)),
+        Signal("vector_parts", "relay_cluster", datetime(2026, 8, 3, 22, 5), 0.83, "route_change", ("regulated_material", "after_hours")),
+        Signal("relay_cluster", "fulfillment_hub", datetime(2026, 8, 4, 9, 30), 0.9, "dock_access"),
+        Signal("northstar_supply", "fulfillment_hub", datetime(2026, 8, 4, 9, 45), 0.74, "shipment_overlap"),
+        Signal("vector_parts", "fulfillment_hub", datetime(2026, 8, 4, 9, 46), 0.79, "shipment_overlap", ("route_deviation",)),
+        Signal("harbor_buffer", "fulfillment_hub", datetime(2026, 8, 4, 9, 47), 0.93, "dock_access"),
     ]
     engine = StrategicSignalFusionEngine(signals)
-    return engine.analyze(watchlist={"watchtower"})
+    return engine.analyze(watchlist={"fulfillment_hub"})
 
 
 def _format_result(result: AnalysisResult) -> str:
-    lines = ["Top assessments:"]
+    lines = ["Top telemetry risk assessments:"]
     for assessment in result.assessments[:5]:
         lines.append(
             f"- {assessment.entity}: total={assessment.total_score} "
@@ -237,7 +239,7 @@ def _format_result(result: AnalysisResult) -> str:
         )
 
     lines.append("")
-    lines.append("Exposure paths:")
+    lines.append("Upstream dependency paths:")
     for entity, path in sorted(result.exposure_paths.items()):
         lines.append(f"- {entity}: {' -> '.join(path)}")
     return "\n".join(lines)

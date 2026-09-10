@@ -1,11 +1,11 @@
 # Code_333
 
-`Code_333` now includes a self-contained Python intelligence-analysis demo with:
+`Code_333` now includes a self-contained Python supply-chain telemetry analysis demo with:
 
 - temporal signal fusion
 - weighted relationship scoring
-- watchlist-driven threat ranking
-- exposure-path tracing across an entity graph
+- focus-node risk ranking
+- upstream path tracing across an entity graph
 
 ## Run the demo
 
