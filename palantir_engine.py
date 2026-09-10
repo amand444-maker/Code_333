@@ -56,18 +56,21 @@ class StrategicSignalFusionEngine:
         entities = graph_entities | set(suspicion) | set(anomalies) | set(tags) | watchlist_set
         assessments = []
         for entity in sorted(entities):
+            suspicion_score = round(suspicion.get(entity, 0.0), 4)
+            centrality_score = round(centrality.get(entity, 0.0), 4)
+            anomaly_score = round(anomalies.get(entity, 0.0), 4)
             total = (
-                suspicion.get(entity, 0.0) * 0.5
-                + centrality.get(entity, 0.0) * 0.3
-                + anomalies.get(entity, 0.0) * 0.2
+                suspicion_score * 0.5
+                + centrality_score * 0.3
+                + anomaly_score * 0.2
                 + (0.15 if entity in watchlist_set else 0.0)
             )
             assessments.append(
                 EntityAssessment(
                     entity=entity,
-                    suspicion_score=round(suspicion.get(entity, 0.0), 4),
-                    centrality_score=round(centrality.get(entity, 0.0), 4),
-                    anomaly_score=round(anomalies.get(entity, 0.0), 4),
+                    suspicion_score=suspicion_score,
+                    centrality_score=centrality_score,
+                    anomaly_score=anomaly_score,
                     total_score=round(min(total, 1.0), 4),
                     supporting_tags=tuple(sorted(tags.get(entity, ()))),
                 )
@@ -117,6 +120,7 @@ class StrategicSignalFusionEngine:
     def _calculate_anomalies(self) -> Dict[str, float]:
         activity: DefaultDict[str, List[datetime]] = defaultdict(list)
         for signal in self.signals:
+            activity[signal.origin].append(signal.timestamp)
             activity[signal.target].append(signal.timestamp)
 
         anomalies = {}

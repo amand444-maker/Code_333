@@ -44,6 +44,20 @@ class StrategicSignalFusionEngineTests(unittest.TestCase):
         self.assertGreater(by_entity["target"].total_score, by_entity["other"].total_score)
         self.assertEqual(result.assessments[0].entity, "target")
 
+    def test_exposure_paths_prefer_shortest_then_strongest_route(self) -> None:
+        signals = [
+            Signal("alpha", "beta", datetime(2026, 8, 1, 9, 0), 0.4, "facility_access"),
+            Signal("beta", "omega", datetime(2026, 8, 1, 9, 5), 0.4, "facility_access"),
+            Signal("alpha", "delta", datetime(2026, 8, 1, 9, 10), 0.95, "financial_transfer"),
+            Signal("delta", "omega", datetime(2026, 8, 1, 9, 15), 0.95, "financial_transfer"),
+            Signal("alpha", "epsilon", datetime(2026, 8, 1, 9, 20), 0.99, "encrypted_contact"),
+            Signal("epsilon", "zeta", datetime(2026, 8, 1, 9, 25), 0.99, "encrypted_contact"),
+            Signal("zeta", "omega", datetime(2026, 8, 1, 9, 30), 0.99, "encrypted_contact"),
+        ]
+        result = StrategicSignalFusionEngine(signals).analyze(watchlist={"omega"})
+        self.assertEqual(result.exposure_paths["alpha"], ["alpha", "delta", "omega"])
+        self.assertEqual(result.exposure_paths["epsilon"], ["epsilon", "zeta", "omega"])
+
 
 if __name__ == "__main__":
     unittest.main()
