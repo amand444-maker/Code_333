@@ -149,29 +149,33 @@ class StrategicSignalFusionEngine:
                 reverse_graph[target].append((source, weight))
 
         paths: Dict[str, List[str]] = {}
-        best_candidates: Dict[str, Tuple[int, float, Tuple[str, ...]]] = {}
-        frontier: List[Tuple[int, float, Tuple[str, ...], str]] = []
+        best_candidates: Dict[str, Tuple[int, float, str, str]] = {}
+        frontier: List[Tuple[int, float, str, str, str]] = []
 
         for watched in sorted(watchlist):
-            candidate = (0, 0.0, (watched,))
+            candidate = (0, 0.0, watched, "")
             best_candidates[watched] = candidate
-            heappush(frontier, (0, 0.0, (watched,), watched))
+            heappush(frontier, (0, 0.0, watched, "", watched))
 
         while frontier:
-            hop_count, neg_strength, path, current = heappop(frontier)
-            if best_candidates.get(current) != (hop_count, neg_strength, path):
+            hop_count, neg_strength, terminal_watch, next_hop, current = heappop(frontier)
+            if best_candidates.get(current) != (hop_count, neg_strength, terminal_watch, next_hop):
                 continue
 
             for predecessor, weight in reverse_graph.get(current, ()):
-                next_path = (predecessor, *path)
-                candidate = (hop_count + 1, neg_strength - weight, next_path)
-                if candidate < best_candidates.get(predecessor, (float("inf"), float("inf"), ())):
+                candidate = (hop_count + 1, neg_strength - weight, terminal_watch, current)
+                if candidate < best_candidates.get(predecessor, (float("inf"), float("inf"), "\uffff", "\uffff")):
                     best_candidates[predecessor] = candidate
                     heappush(frontier, (*candidate, predecessor))
 
-        for entity, (_, _, path) in best_candidates.items():
+        for entity in best_candidates:
             if entity not in watchlist:
-                paths[entity] = list(path)
+                current = entity
+                path = [current]
+                while current not in watchlist:
+                    current = best_candidates[current][3]
+                    path.append(current)
+                paths[entity] = path
         return paths
 
     @staticmethod
