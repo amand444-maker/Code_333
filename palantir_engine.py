@@ -47,7 +47,7 @@ class StrategicSignalFusionEngine:
         tags = self._supporting_tags()
         paths = self._exposure_paths(graph, watchlist_set)
 
-        entities = set(graph) | set(suspicion) | set(anomalies) | watchlist_set
+        entities = set(graph) | set(suspicion) | set(anomalies) | set(tags) | watchlist_set
         assessments = []
         for entity in sorted(entities):
             total = (
